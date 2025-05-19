@@ -11,7 +11,7 @@ import (
 func main() {
 
 	cfg := config.MustNew()
-	lg := logger.MustNew(cfg.Environment)
+	lg := logger.MustNew(cfg.Env)
 	store := store.MustNew(lg, &cfg.Store)
 	service := service.MustNew(store, lg)
 	server := server.MustNew(service, lg, &cfg.Server)
