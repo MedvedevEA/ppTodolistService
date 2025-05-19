@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"ppTodolistService/internal/entity"
-	repoStoreDto "ppTodolistService/internal/repository/dto"
-	repoStoreErr "ppTodolistService/internal/repository/err"
+	repoDto "ppTodolistService/internal/repository/dto"
+	repoErr "ppTodolistService/internal/repository/err"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -34,11 +34,11 @@ DELETE FROM message
 WHERE message_id=$1;`
 )
 
-func (s *Store) AddMessage(dto *repoStoreDto.AddMessage) (*entity.Message, error) {
+func (s *Store) AddMessage(dto *repoDto.AddMessage) (*entity.Message, error) {
 	message := new(entity.Message)
 	err := s.pool.QueryRow(context.Background(), addMessageQuery, dto.TaskId, dto.UserId, dto.Text).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
-		return nil, fmt.Errorf("store.AddMessage: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: AddMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return message, nil
 }
@@ -47,16 +47,16 @@ func (s *Store) GetMessage(messageId *uuid.UUID) (*entity.Message, error) {
 	err := s.pool.QueryRow(context.Background(), getMessageQuery, messageId).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store.GetMessage: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+			return nil, fmt.Errorf("store: GetMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
 		}
-		return nil, fmt.Errorf("store.GetMessage: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: GetMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return message, nil
 }
-func (s *Store) GetMessages(dto *repoStoreDto.GetMessages) ([]*entity.Message, error) {
+func (s *Store) GetMessages(dto *repoDto.GetMessages) ([]*entity.Message, error) {
 	rows, err := s.pool.Query(context.Background(), getMessagesQuery, dto.Offset, dto.Limit, dto.TaskId)
 	if err != nil {
-		return nil, fmt.Errorf("store.GetMessages: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: GetMessages: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	defer rows.Close()
 	var messages []*entity.Message
@@ -64,21 +64,21 @@ func (s *Store) GetMessages(dto *repoStoreDto.GetMessages) ([]*entity.Message, e
 		message := new(entity.Message)
 		err := rows.Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 		if err != nil {
-			return nil, fmt.Errorf("store.GetMessages: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+			return nil, fmt.Errorf("store: GetMessages: error: %w: %v", repoErr.ErrInternalServerError, err)
 		}
 		messages = append(messages, message)
 	}
 	return messages, nil
 }
 
-func (s *Store) UpdateMessage(dto *repoStoreDto.UpdateMessage) (*entity.Message, error) {
+func (s *Store) UpdateMessage(dto *repoDto.UpdateMessage) (*entity.Message, error) {
 	message := new(entity.Message)
 	err := s.pool.QueryRow(context.Background(), updateMessageQuery, dto.MessageId, dto.Text).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store.UpdateMessage: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+			return nil, fmt.Errorf("store: UpdateMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
 		}
-		return nil, fmt.Errorf("store.UpdateMessage: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: UpdateMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return message, nil
 }
@@ -86,10 +86,10 @@ func (s *Store) UpdateMessage(dto *repoStoreDto.UpdateMessage) (*entity.Message,
 func (s *Store) RemoveMessage(messageId *uuid.UUID) error {
 	result, err := s.pool.Exec(context.Background(), removeMessageQuery, messageId)
 	if err != nil {
-		return fmt.Errorf("store.RemoveMessage: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return fmt.Errorf("store: RemoveMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("store.RemoveMessage: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+		return fmt.Errorf("store: RemoveMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
 	}
 
 	return nil

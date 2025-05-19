@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"ppTodolistService/internal/entity"
 	"ppTodolistService/internal/repository/dto"
-	repoStoreErr "ppTodolistService/internal/repository/err"
+	repoErr "ppTodolistService/internal/repository/err"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -34,7 +34,7 @@ func (s *Store) AddStatus(name string) (*entity.Status, error) {
 	status := new(entity.Status)
 	err := s.pool.QueryRow(context.Background(), addStatusQuery, name).Scan(&status.StatusId, &status.Name)
 	if err != nil {
-		return nil, fmt.Errorf("store.AddStatus: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: AddStatus: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return status, nil
 }
@@ -43,16 +43,16 @@ func (s *Store) GetStatus(statusId *uuid.UUID) (*entity.Status, error) {
 	err := s.pool.QueryRow(context.Background(), getStatusQuery, statusId).Scan(&status.StatusId, &status.Name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store.GetStatus: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+			return nil, fmt.Errorf("store: GetStatus: error: %w: %v", repoErr.ErrRecordNotFound, err)
 		}
-		return nil, fmt.Errorf("store.GetStatus: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: GetStatus: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return status, nil
 }
 func (s *Store) GetStatuses() ([]*entity.Status, error) {
 	rows, err := s.pool.Query(context.Background(), getStatusesQuery)
 	if err != nil {
-		return nil, fmt.Errorf("store.GetStatuses: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: GetStatuses: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	defer rows.Close()
 	statuses := make([]*entity.Status, 0)
@@ -60,7 +60,7 @@ func (s *Store) GetStatuses() ([]*entity.Status, error) {
 		status := new(entity.Status)
 		err := rows.Scan(&status.StatusId, &status.Name)
 		if err != nil {
-			return nil, fmt.Errorf("store.GetStatuses: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+			return nil, fmt.Errorf("store: GetStatuses: error: %w: %v", repoErr.ErrInternalServerError, err)
 		}
 		statuses = append(statuses, status)
 	}
@@ -71,19 +71,19 @@ func (s *Store) UpdateStatus(dto *dto.UpdateStatus) (*entity.Status, error) {
 	err := s.pool.QueryRow(context.Background(), updateStatusQuery, dto.StatusId, dto.Name).Scan(&status.StatusId, &status.Name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store.UpdateStatus: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+			return nil, fmt.Errorf("store: UpdateStatus: error: %w: %v", repoErr.ErrRecordNotFound, err)
 		}
-		return nil, fmt.Errorf("store.UpdateStatus: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return nil, fmt.Errorf("store: UpdateStatus: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	return status, nil
 }
 func (s *Store) RemoveStatus(statusId *uuid.UUID) error {
 	result, err := s.pool.Exec(context.Background(), removeStatusQuery, statusId)
 	if err != nil {
-		return fmt.Errorf("store.RemoveStatus: %w (%v)", repoStoreErr.ErrInternalServerError, err)
+		return fmt.Errorf("store: RemoveStatus: error: %w: %v", repoErr.ErrInternalServerError, err)
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("store.RemoveStatus: %w (%v)", repoStoreErr.ErrRecordNotFound, err)
+		return fmt.Errorf("store: RemoveStatus: error: %w: %v", repoErr.ErrRecordNotFound, err)
 	}
 	return nil
 }
