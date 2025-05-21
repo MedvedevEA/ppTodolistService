@@ -33,12 +33,12 @@ type Server struct {
 func MustNew() *Config {
 	//TODO
 	if err := godotenv.Load("./../.env"); err != nil {
-		log.Fatalf("config error: %v", err)
+		log.Fatalf("failed to load configuration: %v\n", err)
 	}
 
 	cfg := new(Config)
 	if err := envconfig.Process("", cfg); err != nil {
-		log.Fatalf("config error: %v", err)
+		log.Fatalf("failed to load configuration: %v\n", err)
 	}
 	return cfg
 }
