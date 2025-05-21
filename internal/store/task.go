@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"log/slog"
 	"ppTodolistService/internal/entity"
 	repoDto "ppTodolistService/internal/repository/dto"
 	repoErr "ppTodolistService/internal/repository/err"
@@ -40,7 +40,8 @@ func (s *Store) AddTask(dto *repoDto.AddTask) (*entity.Task, error) {
 	task := new(entity.Task)
 	err := s.pool.QueryRow(context.Background(), addTaskQuery, dto.StatusId, dto.Title, dto.Description).Scan(&task.TaskId, &task.StatusId, &task.Title, &task.Description)
 	if err != nil {
-		return nil, fmt.Errorf("store: AddTask: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.AddTask"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	return task, nil
 }
@@ -48,17 +49,19 @@ func (s *Store) GetTask(taskId *uuid.UUID) (*entity.Task, error) {
 	task := new(entity.Task)
 	err := s.pool.QueryRow(context.Background(), getTaskQuery, taskId).Scan(&task.TaskId, &task.StatusId, &task.Title, &task.Description)
 	if err != nil {
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetTask"))
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store: GetTask: error: %w: %v", repoErr.ErrRecordNotFound, err)
+			return nil, repoErr.ErrRecordNotFound
 		}
-		return nil, fmt.Errorf("store: GetTask: error: %w: %v", repoErr.ErrInternalServerError, err)
+		return nil, repoErr.ErrInternalServerError
 	}
 	return task, nil
 }
 func (s *Store) GetTasks(dto *repoDto.GetTasks) ([]*entity.Task, error) {
 	rows, err := s.pool.Query(context.Background(), getTasksQuery, dto.Offset, dto.Limit, dto.StatusId)
 	if err != nil {
-		return nil, fmt.Errorf("store: GetTasks: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetTasks"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	defer rows.Close()
 	tasks := make([]*entity.Task, 0)
@@ -66,7 +69,8 @@ func (s *Store) GetTasks(dto *repoDto.GetTasks) ([]*entity.Task, error) {
 		task := new(entity.Task)
 		err := rows.Scan(&task.TaskId, &task.StatusId, &task.Title, &task.Description)
 		if err != nil {
-			return nil, fmt.Errorf("store: GetTasks: error: %w: %v", repoErr.ErrInternalServerError, err)
+			s.lg.Error(err.Error(), slog.String("owner", "store.GetTasks"))
+			return nil, repoErr.ErrInternalServerError
 		}
 		tasks = append(tasks, task)
 	}
@@ -76,22 +80,24 @@ func (s *Store) UpdateTask(dto *repoDto.UpdateTask) (*entity.Task, error) {
 	task := new(entity.Task)
 	err := s.pool.QueryRow(context.Background(), updateTaskQuery, dto.TaskId, dto.StatusId, dto.Title, dto.Description).Scan(&task.TaskId, &task.StatusId, &task.Title, &task.Description)
 	if err != nil {
+		s.lg.Error(err.Error(), slog.String("owner", "store.UpdateTask"))
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store: UpdateTask: error: %w: %v", repoErr.ErrRecordNotFound, err)
+			return nil, repoErr.ErrRecordNotFound
 		}
-		return nil, fmt.Errorf("store: UpdateTask: error: %w: %v", repoErr.ErrInternalServerError, err)
+		return nil, repoErr.ErrInternalServerError
 	}
 	return task, nil
 }
 
 func (s *Store) RemoveTask(taskId *uuid.UUID) error {
-	const op = "store: RemoveTask"
 	result, err := s.pool.Exec(context.Background(), removeTaskQuery, taskId)
 	if err != nil {
-		return fmt.Errorf("%s: error: %w: %v", op, repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.RemoveTask"))
+		return repoErr.ErrInternalServerError
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("%s: error: %w: %v", op, repoErr.ErrRecordNotFound, err)
+		s.lg.Error(sql.ErrNoRows.Error(), slog.String("owner", "store.RemoveTask"))
+		return repoErr.ErrRecordNotFound
 	}
 
 	return nil

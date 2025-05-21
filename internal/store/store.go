@@ -34,14 +34,17 @@ func MustNew(lg *slog.Logger, cfg *config.Store) *Store {
 
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		log.Fatalf("store: error: %v", err)
+		log.Fatalf("store: %v", err)
 	}
 
 	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
-		log.Fatalf("store: error: %v", err)
+		log.Fatalf("store: %v", err)
+	}
+	if err := pool.Ping(context.Background()); err != nil {
+		log.Fatalf("store: %v", err)
 	}
 	return &Store{
 		pool,

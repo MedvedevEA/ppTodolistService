@@ -6,8 +6,13 @@ import (
 )
 
 type Service struct {
+	store repository.Repository
+	lg    *slog.Logger
 }
 
 func MustNew(store repository.Repository, lg *slog.Logger) *Service {
-	return nil
+	return &Service{
+		store,
+		lg,
+	}
 }

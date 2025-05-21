@@ -2,7 +2,8 @@ package store
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"log/slog"
 	"ppTodolistService/internal/entity"
 	repoDto "ppTodolistService/internal/repository/dto"
 	repoErr "ppTodolistService/internal/repository/err"
@@ -29,11 +30,11 @@ func (s *Store) AddTaskUser(dto *repoDto.AddTaskUser) (*entity.TaskUser, error) 
 	taskUser := new(entity.TaskUser)
 	err := s.pool.QueryRow(context.Background(), addTaskUserQuery, dto.TaskId, dto.UserId).Scan(&taskUser.TaskUserId, &taskUser.UserId, &taskUser.TaskId)
 	if err != nil {
+		s.lg.Error(err.Error(), slog.String("owner", "store.AddTaskUsers"))
 		if pgError, ok := err.(*pgconn.PgError); ok && pgError.Code == "23505" {
-			return nil, fmt.Errorf("store: AddTaskUser: error: %w: %v", repoErr.ErrUniqueViolation, err)
-
+			return nil, repoErr.ErrUniqueViolation
 		}
-		return nil, fmt.Errorf("store: AddTaskUser: error: %w: %v", repoErr.ErrInternalServerError, err)
+		return nil, repoErr.ErrInternalServerError
 
 	}
 	return taskUser, nil
@@ -41,7 +42,8 @@ func (s *Store) AddTaskUser(dto *repoDto.AddTaskUser) (*entity.TaskUser, error) 
 func (s *Store) GetTaskUsers(dto *repoDto.GetTaskUsers) ([]*entity.TaskUser, error) {
 	rows, err := s.pool.Query(context.Background(), getTaskUsersQuery, dto.Offset, dto.Limit, dto.TaskId, dto.UserId)
 	if err != nil {
-		return nil, fmt.Errorf("store: GetTaskUsers: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetTaskUsers"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	defer rows.Close()
 	taskUsers := make([]*entity.TaskUser, 0)
@@ -49,7 +51,8 @@ func (s *Store) GetTaskUsers(dto *repoDto.GetTaskUsers) ([]*entity.TaskUser, err
 		taskUser := new(entity.TaskUser)
 		err := rows.Scan(&taskUser.TaskUserId, &taskUser.TaskId, &taskUser.UserId)
 		if err != nil {
-			return nil, fmt.Errorf("store: GetTaskUsers: error: %w: %v", repoErr.ErrInternalServerError, err)
+			s.lg.Error(err.Error(), slog.String("owner", "store.GetTaskUsers"))
+			return nil, repoErr.ErrInternalServerError
 		}
 		taskUsers = append(taskUsers, taskUser)
 	}
@@ -59,10 +62,12 @@ func (s *Store) GetTaskUsers(dto *repoDto.GetTaskUsers) ([]*entity.TaskUser, err
 func (s *Store) RemoveTaskUser(TaskUserId *uuid.UUID) error {
 	result, err := s.pool.Exec(context.Background(), removeTaskUserQuery, TaskUserId)
 	if err != nil {
-		return fmt.Errorf("store: RemoveTaskUser: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.RemoveTaskUser"))
+		return repoErr.ErrInternalServerError
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("store: RemoveTaskUser: error: %w: %v", repoErr.ErrRecordNotFound, err)
+		s.lg.Error(sql.ErrNoRows.Error(), slog.String("owner", "store.RemoveTaskUser"))
+		return repoErr.ErrRecordNotFound
 	}
 	return nil
 }

@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"log/slog"
 	"ppTodolistService/internal/entity"
 	repoDto "ppTodolistService/internal/repository/dto"
 	repoErr "ppTodolistService/internal/repository/err"
@@ -38,7 +38,8 @@ func (s *Store) AddMessage(dto *repoDto.AddMessage) (*entity.Message, error) {
 	message := new(entity.Message)
 	err := s.pool.QueryRow(context.Background(), addMessageQuery, dto.TaskId, dto.UserId, dto.Text).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
-		return nil, fmt.Errorf("store: AddMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.AddMessage"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	return message, nil
 }
@@ -46,17 +47,19 @@ func (s *Store) GetMessage(messageId *uuid.UUID) (*entity.Message, error) {
 	message := new(entity.Message)
 	err := s.pool.QueryRow(context.Background(), getMessageQuery, messageId).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetMessage"))
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store: GetMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
+			return nil, repoErr.ErrRecordNotFound
 		}
-		return nil, fmt.Errorf("store: GetMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
+		return nil, repoErr.ErrInternalServerError
 	}
 	return message, nil
 }
 func (s *Store) GetMessages(dto *repoDto.GetMessages) ([]*entity.Message, error) {
 	rows, err := s.pool.Query(context.Background(), getMessagesQuery, dto.Offset, dto.Limit, dto.TaskId)
 	if err != nil {
-		return nil, fmt.Errorf("store: GetMessages: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetMessages"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	defer rows.Close()
 	var messages []*entity.Message
@@ -64,34 +67,35 @@ func (s *Store) GetMessages(dto *repoDto.GetMessages) ([]*entity.Message, error)
 		message := new(entity.Message)
 		err := rows.Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 		if err != nil {
-			return nil, fmt.Errorf("store: GetMessages: error: %w: %v", repoErr.ErrInternalServerError, err)
+			s.lg.Error(err.Error(), slog.String("owner", "store.GetMessages"))
+			return nil, repoErr.ErrInternalServerError
 		}
 		messages = append(messages, message)
 	}
 	return messages, nil
 }
-
 func (s *Store) UpdateMessage(dto *repoDto.UpdateMessage) (*entity.Message, error) {
 	message := new(entity.Message)
 	err := s.pool.QueryRow(context.Background(), updateMessageQuery, dto.MessageId, dto.Text).Scan(&message.MessageId, &message.TaskId, &message.UserId, &message.Text, &message.CreateAt, &message.UpdateAt)
 	if err != nil {
+		s.lg.Error(err.Error(), slog.String("owner", "store.UpdateMessage"))
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("store: UpdateMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
+			return nil, repoErr.ErrRecordNotFound
 		}
-		return nil, fmt.Errorf("store: UpdateMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
+		return nil, repoErr.ErrInternalServerError
 	}
 	return message, nil
 }
-
 func (s *Store) RemoveMessage(messageId *uuid.UUID) error {
 	result, err := s.pool.Exec(context.Background(), removeMessageQuery, messageId)
 	if err != nil {
-		return fmt.Errorf("store: RemoveMessage: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.RemoveMessage"))
+		return repoErr.ErrInternalServerError
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("store: RemoveMessage: error: %w: %v", repoErr.ErrRecordNotFound, err)
+		s.lg.Error(sql.ErrNoRows.Error(), slog.String("owner", "store.RemoveMessage"))
+		return repoErr.ErrRecordNotFound
 	}
-
 	return nil
 
 }

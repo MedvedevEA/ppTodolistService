@@ -2,7 +2,8 @@ package store
 
 import (
 	"context"
-	"fmt"
+	"database/sql"
+	"log/slog"
 	"ppTodolistService/internal/entity"
 	repoDto "ppTodolistService/internal/repository/dto"
 	repoErr "ppTodolistService/internal/repository/err"
@@ -28,14 +29,16 @@ func (s *Store) AddUserWithUserId(dto *repoDto.AddUser) (*entity.User, error) {
 	user := new(entity.User)
 	err := s.pool.QueryRow(context.Background(), addUserQuery, dto.UserId, dto.Name).Scan(&user.UserId, &user.Name)
 	if err != nil {
-		return nil, fmt.Errorf("store: AddUser: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.AddUserWithUserId"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	return user, nil
 }
 func (s *Store) GetUsers(dto *repoDto.GetUsers) ([]*entity.User, error) {
 	rows, err := s.pool.Query(context.Background(), getUsersQuery, dto.Offset, dto.Limit, dto.Name)
 	if err != nil {
-		return nil, fmt.Errorf("store: GetUsers: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.GetUsers"))
+		return nil, repoErr.ErrInternalServerError
 	}
 	defer rows.Close()
 	users := make([]*entity.User, 0)
@@ -43,7 +46,8 @@ func (s *Store) GetUsers(dto *repoDto.GetUsers) ([]*entity.User, error) {
 		user := new(entity.User)
 		err := rows.Scan(&user.UserId, &user.Name)
 		if err != nil {
-			return nil, fmt.Errorf("store: GetUsers: error: %w: %v", repoErr.ErrInternalServerError, err)
+			s.lg.Error(err.Error(), slog.String("owner", "store.GetUsers"))
+			return nil, repoErr.ErrInternalServerError
 		}
 		users = append(users, user)
 	}
@@ -52,10 +56,12 @@ func (s *Store) GetUsers(dto *repoDto.GetUsers) ([]*entity.User, error) {
 func (s *Store) RemoveUser(userId *uuid.UUID) error {
 	result, err := s.pool.Exec(context.Background(), removeUserQuery, userId)
 	if err != nil {
-		return fmt.Errorf("store: RemoveUser: error: %w: %v", repoErr.ErrInternalServerError, err)
+		s.lg.Error(err.Error(), slog.String("owner", "store.RemoveUser"))
+		return repoErr.ErrInternalServerError
 	}
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("store: RemoveUser: error: %w: %v", repoErr.ErrRecordNotFound, err)
+		s.lg.Error(sql.ErrNoRows.Error(), slog.String("owner", "store.RemoveUser"))
+		return repoErr.ErrRecordNotFound
 	}
 	return nil
 
