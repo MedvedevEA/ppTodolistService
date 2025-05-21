@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -24,12 +25,19 @@ type Store struct {
 	PoolMaxConnIdleTime time.Duration `envconfig:"STORE_POOL_MAX_CONN_IDLE_TIME" default:"100s"`
 }
 type Server struct {
-	BindAddr string `envconfig:"SERVER_BIND_ADDR" required:"true"`
+	BindAddr     string        `envconfig:"SERVER_BIND_ADDR" required:"true"`
+	Name         string        `envconfig:"SERVER_NAME" required:"true"`
+	WriteTimeout time.Duration `envconfig:"SERVER_WRITE_TIMEOUT" required:"true"`
 }
 
 func MustNew() *Config {
+	//TODO
+	if err := godotenv.Load("./../.env"); err != nil {
+		log.Fatalf("config: error: %v", err)
+	}
+
 	cfg := new(Config)
-	if err := envconfig.Process("", &cfg); err != nil {
+	if err := envconfig.Process("", cfg); err != nil {
 		log.Fatalf("config: error: %v", err)
 	}
 	return cfg
