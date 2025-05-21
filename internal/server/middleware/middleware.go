@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"fmt"
 	"log/slog"
+	srvErr "ppTodolistService/internal/server/err"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,7 +15,8 @@ func GetLoggerMiddlewareFunc(lg *slog.Logger, appName string) func(c *fiber.Ctx)
 		err := ctx.Next()
 
 		lg.Info(
-			fmt.Sprintf("server '%s': request", appName),
+			"",
+			slog.String("owner", "server"),
 			slog.Any("method", ctx.Method()),
 			slog.Any("path", ctx.Path()),
 			slog.Any("statusCode", ctx.Response().StatusCode()),
@@ -26,5 +27,5 @@ func GetLoggerMiddlewareFunc(lg *slog.Logger, appName string) func(c *fiber.Ctx)
 }
 
 func BadRequest(ctx *fiber.Ctx) error {
-	return ctx.Status(404).SendString("badRequestMiddleware: unregistered route")
+	return ctx.Status(404).SendString(srvErr.ErrRouteNotFound.Error())
 }
