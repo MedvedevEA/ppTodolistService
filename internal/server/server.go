@@ -25,7 +25,7 @@ func MustNew(svc *service.Service, lg *slog.Logger, cfg *config.Server) *Server 
 		WriteTimeout: cfg.WriteTimeout,
 	})
 	app.Use(recover.New(recover.ConfigDefault))
-	app.Use(middleware.GetLoggerMiddlewareFunc(lg, cfg.Name))
+	app.Use(middleware.GetLoggerMiddlewareFunc(lg))
 
 	apiGroup := app.Group("/api")
 	v1Group := apiGroup.Group("/v1")
@@ -69,20 +69,21 @@ func MustNew(svc *service.Service, lg *slog.Logger, cfg *config.Server) *Server 
 }
 
 func (s *Server) Start() {
-	chError := make(chan error, 1)
+	chErr := make(chan error, 1)
+	defer close(chErr)
 	go func() {
 		s.lg.Info("server is started", slog.String("owner", "server"), slog.String("bindAddress", s.cfg.BindAddr))
 		if err := s.app.Listen(s.cfg.BindAddr); err != nil {
-			chError <- err
+			chErr <- err
 		}
 	}()
 	go func() {
 		chQuit := make(chan os.Signal, 1)
 		signal.Notify(chQuit, syscall.SIGINT, syscall.SIGTERM)
 		<-chQuit
-		chError <- s.app.Shutdown()
+		chErr <- s.app.Shutdown()
 	}()
-	if err := <-chError; err != nil {
+	if err := <-chErr; err != nil {
 		s.lg.Error(err.Error(), slog.String("owner", "server"))
 		return
 	}

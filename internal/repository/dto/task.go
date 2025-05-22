@@ -3,6 +3,7 @@ package dto
 import "github.com/google/uuid"
 
 type AddTask struct {
+	UserId      *uuid.UUID `json:"userId"`
 	StatusId    *uuid.UUID `json:"statusId"`
 	Title       string     `json:"title"`
 	Description string     `json:"description"`

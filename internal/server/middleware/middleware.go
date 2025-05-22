@@ -8,14 +8,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetLoggerMiddlewareFunc(lg *slog.Logger, appName string) func(c *fiber.Ctx) error {
+func GetLoggerMiddlewareFunc(lg *slog.Logger) func(c *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		start := time.Now()
 
 		err := ctx.Next()
 
 		lg.Info(
-			"",
+			"incoming server request",
 			slog.String("owner", "server"),
 			slog.Any("method", ctx.Method()),
 			slog.Any("path", ctx.Path()),
