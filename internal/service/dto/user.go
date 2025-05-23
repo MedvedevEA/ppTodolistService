@@ -3,7 +3,7 @@ package dto
 import "github.com/google/uuid"
 
 type AddUser struct {
-	UserId *uuid.UUID `json:"user_id"`
+	UserId *uuid.UUID `json:"userId"`
 	Name   string     `json:"name"`
 }
 type GetUsers struct {
@@ -12,5 +12,5 @@ type GetUsers struct {
 	Name   *string `query:"name" validate:"omitempty"`
 }
 type RemoveUser struct {
-	UserId *uuid.UUID `uri:"user_id"`
+	UserId *uuid.UUID `uri:"userId"`
 }
